@@ -278,3 +278,52 @@ Built-in and third-party plugins are loaded through the `plugins/` subsystem.
 - It exists to study source exposure, packaging failures, and the architecture of modern agentic CLI systems.
 - The original Claude Code source remains the property of **Anthropic**.
 - This repository is **not affiliated with, endorsed by, or maintained by Anthropic**.
+
+## Learning Notes
+
+### Overall structure
+```mermaid
+flowchart TD
+    A["User runs CLI"] --> B["cli.tsx bootstrap"]
+    B --> C{"Fast path?"}
+    C -->|"Yes"| D["Special mode or exit"]
+    C -->|"No"| E["main.tsx startup"]
+
+    E --> F["setup()"]
+    E --> G["Load commands and agents"]
+    E --> H["Resolve MCP configs"]
+    E --> I["Prefetch hooks and context"]
+    F --> J["Render REPL or start headless mode"]
+    G --> J
+    H --> J
+    I --> J
+
+    J --> K["User types prompt and hits Enter"]
+    K --> L["REPL builds tool list, commands, system prompt, user context"]
+    L --> M["query() turn loop"]
+
+    M --> N["Preload memory and skill hints"]
+    N --> O["Microcompact or context collapse or autocompact"]
+    O --> P["Call model API"]
+
+    P --> Q{"Model returns tool calls?"}
+    Q -->|"No"| R["Stream assistant output to UI"]
+    Q -->|"Yes"| S["Resolve tools from Tool.ts and tools.ts"]
+    S --> T{"Concurrency-safe and read-only?"}
+    T -->|"Yes"| U["Run eligible tools in parallel"]
+    T -->|"No"| V["Run tools serially"]
+
+    U --> W["Collect tool results"]
+    V --> W
+    W --> X["Inject attachments, memories, queued commands, skill discoveries"]
+    X --> Y["Refresh tools if MCP changed"]
+    Y --> M
+
+    R --> Z{"Turn finished?"}
+    Z -->|"Yes"| AA["Update transcript and app state"]
+    Z -->|"Needs continuation"| M
+
+    H --> AB["useManageMCPConnections keeps MCP state live"]
+    AB --> L
+
+```
